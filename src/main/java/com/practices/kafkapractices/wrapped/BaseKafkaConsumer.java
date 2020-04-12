@@ -31,12 +31,15 @@ public interface BaseKafkaConsumer {
         try {
             if (!this.isJSONValid(message)) {
                 throw new IllegalArgumentException("Kafka message is not valid json string.");
-            } else if (!this.hasValidFields(message)) {
-                throw new IllegalArgumentException("Kafka message format is not valid.");
             }
 
             ObjectMapper mapper = new ObjectMapper();
             KafkaMessage messageObject = mapper.readValue(message, KafkaMessage.class);
+
+            if (this.hasValidFields(messageObject)) {
+                throw new IllegalArgumentException("Kafka message format is not valid.");
+            }
+
             onConsumeMessage(messageObject);
         } catch (Exception ex) {
             logger.error(ex.getMessage());
@@ -54,18 +57,8 @@ public interface BaseKafkaConsumer {
         }
     }
 
-    private boolean hasValidFields(String jsonInString) {
-        try {
-            final ObjectMapper mapper = new ObjectMapper();
-            KafkaMessage message = mapper.readValue(jsonInString, KafkaMessage.class);
-
-            if(message.event_message == "" || message.event_type == "") {
-                return false;
-            }
-            return true;
-        } catch (Exception ex) {
-            return false;
-        }
+    private boolean hasValidFields(KafkaMessage messageObject) {
+        return (messageObject.event_message != "" && messageObject.event_type != "");
     }
 
     public void onConsumeMessage(KafkaMessage message);
