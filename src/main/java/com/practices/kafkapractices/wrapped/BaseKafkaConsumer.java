@@ -5,6 +5,8 @@ import com.practices.kafkapractices.aspects.AutoCommitOffset;
 import com.practices.kafkapractices.aspects.LogExecutionTime;
 import com.practices.kafkapractices.aspects.ValidateInputMessage;
 import com.practices.kafkapractices.dto.KafkaMessage;
+import com.practices.kafkapractices.dto.TestDTO;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,7 +26,9 @@ public interface BaseKafkaConsumer {
     Logger logger = LogManager.getLogger();
 
     @KafkaListener(topics = "test", groupId = "test-consumer-string")
-    private void consume(String message) {
+    private void consume(ConsumerRecord record) {
+        String message = record.value().toString();
+
         try {
             if (!this.isJSONValid(message)) {
                 throw new IllegalArgumentException("Kafka message is not valid json string.");
@@ -33,14 +37,17 @@ public interface BaseKafkaConsumer {
             ObjectMapper mapper = new ObjectMapper();
             KafkaMessage messageObject = mapper.readValue(message, KafkaMessage.class);
 
-            if (this.hasValidFields(messageObject)) {
+            // TODO: Generic 으로 처리 못하나???
+            messageObject.event_message = mapper.convertValue(messageObject.event_message, TestDTO.class);
+
+            if (!this.hasValidFields(messageObject)) {
                 throw new IllegalArgumentException("Kafka message format is not valid.");
             }
 
             onConsumeMessage(messageObject);
         } catch (Exception ex) {
             logger.error(ex.getMessage());
-            onError(ex);
+            onError(ex, record);
         }
     }
 
@@ -55,9 +62,9 @@ public interface BaseKafkaConsumer {
     }
 
     private boolean hasValidFields(KafkaMessage messageObject) {
-        return (messageObject.event_message != "" && messageObject.event_type != "");
+        return (messageObject.event_message != null && messageObject.event_type != null);
     }
 
     public void onConsumeMessage(KafkaMessage message);
-    public void onError(Exception ex);
+    public void onError(Exception ex, ConsumerRecord record);
 }
