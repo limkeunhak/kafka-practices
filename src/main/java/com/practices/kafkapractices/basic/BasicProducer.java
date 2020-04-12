@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Properties;
 
-@Component
 public class BasicProducer {
 
     public void sendMessage(String topicName, String message) {
