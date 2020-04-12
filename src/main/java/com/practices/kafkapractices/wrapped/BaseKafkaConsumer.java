@@ -23,9 +23,6 @@ public interface BaseKafkaConsumer {
     // TODO: Custom Logger로 변경 후 Autowired 처리 혹은 Logging 제거 (밖에서 로깅하도록)
     Logger logger = LogManager.getLogger();
 
-//    @AutoCommitOffset
-//    @ValidateInputMessage
-//    @LogExecutionTime
     @KafkaListener(topics = "test", groupId = "test-consumer-string")
     private void consume(String message) {
         try {
