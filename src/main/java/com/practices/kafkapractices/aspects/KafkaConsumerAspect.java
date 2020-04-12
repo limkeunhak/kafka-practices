@@ -60,7 +60,7 @@ public class KafkaConsumerAspect {
     @After("@annotation(AutoCommitOffset)")
     public void PostConsumeAdvice(JoinPoint joinPoint) {
         System.out.println("PostConsumeAdvice() called");
-
+        // TODO: Auto Commit
     }
 
     /**

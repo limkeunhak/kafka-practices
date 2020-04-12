@@ -6,8 +6,14 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MemberKafkaConsumer implements BaseKafkaConsumer {
+
     @Override
-    public void consumeMessage(KafkaMessage message) {
+    public void onConsumeMessage(KafkaMessage message) {
         System.out.println(message);
+    }
+
+    @Override
+    public void onError(Exception ex) {
+        System.out.println(ex);
     }
 }
