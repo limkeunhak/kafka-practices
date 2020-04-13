@@ -26,23 +26,27 @@ public interface BaseKafkaConsumer {
     // TODO: Custom Logger로 변경 후 Autowired 처리 혹은 Logging 제거 (밖에서 로깅하도록)
     Logger logger = LogManager.getLogger();
 
-    static String INVALID_JSON_MESSAGE_FORMAT_ERROR_TEXT = "Kafka message is not valid json string.";
-    static String INVALID_MESSAGE_FORMAT_ERROR_TEXT = "Kafka message format is not valid.";
+    static String INVALID_JSON_MESSAGE_FORMAT_EXCEPTION_MESSAGE = "Kafka message is not valid json string.";
+    static String INVALID_MESSAGE_FORMAT_EXCEPTION_MESSAGE = "Kafka message format is not valid.";
 
-    @KafkaListener(topics = "${memberservice.kafka.topic.name}", groupId = "${memberservice.kafka.consumer.group-id}")
-    private void consume(ConsumerRecord record, Acknowledgment ack) {
-        String message = record.value().toString();
+    @KafkaListener(
+            topics = "${memberservice.kafka.topic.name}",
+            containerFactory = "baseKafkaConsumerContainerFactory"
+    )
+    private void consume(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        String message = record.value();
+        System.out.println(record.offset() + " : " + Thread.currentThread().getId());
 
         try {
             if (!this.isJSONValid(message)) {
-                throw new IllegalArgumentException(INVALID_JSON_MESSAGE_FORMAT_ERROR_TEXT);
+                throw new IllegalArgumentException(INVALID_JSON_MESSAGE_FORMAT_EXCEPTION_MESSAGE);
             }
 
             ObjectMapper mapper = new ObjectMapper();
             KafkaMessage messageObject = mapper.readValue(message, KafkaMessage.class);
 
             if (!this.hasValidFields(messageObject)) {
-                throw new IllegalArgumentException(INVALID_MESSAGE_FORMAT_ERROR_TEXT);
+                throw new IllegalArgumentException(INVALID_MESSAGE_FORMAT_EXCEPTION_MESSAGE);
             }
 
             onConsumeMessage(messageObject);
@@ -68,6 +72,6 @@ public interface BaseKafkaConsumer {
         return (messageObject.event_message != null && messageObject.event_type != null);
     }
 
-    public void onConsumeMessage(KafkaMessage message);
+    public void onConsumeMessage(KafkaMessage message) throws Exception;
     public void onError(Exception ex, ConsumerRecord record);
 }

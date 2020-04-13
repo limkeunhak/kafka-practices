@@ -13,10 +13,5 @@ import lombok.ToString;
 @ToString
 public class KafkaMessage {
     public String event_type;
-    public String event_message;
-
-    public TestDTO getDtoMessage() throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(this.event_message, TestDTO.class);
-    }
+    public Object event_message;
 }
