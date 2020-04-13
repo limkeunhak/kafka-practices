@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 
 import java.io.IOException;
 
@@ -25,20 +26,23 @@ public interface BaseKafkaConsumer {
     // TODO: Custom Logger로 변경 후 Autowired 처리 혹은 Logging 제거 (밖에서 로깅하도록)
     Logger logger = LogManager.getLogger();
 
+    static String INVALID_JSON_MESSAGE_FORMAT_ERROR_TEXT = "Kafka message is not valid json string.";
+    static String INVALID_MESSAGE_FORMAT_ERROR_TEXT = "Kafka message format is not valid.";
+
     @KafkaListener(topics = "${memberservice.kafka.topic.name}", groupId = "${memberservice.kafka.consumer.group-id}")
-    private void consume(ConsumerRecord record) {
+    private void consume(ConsumerRecord record, Acknowledgment ack) {
         String message = record.value().toString();
 
         try {
             if (!this.isJSONValid(message)) {
-                throw new IllegalArgumentException("Kafka message is not valid json string.");
+                throw new IllegalArgumentException(INVALID_JSON_MESSAGE_FORMAT_ERROR_TEXT);
             }
 
             ObjectMapper mapper = new ObjectMapper();
             KafkaMessage messageObject = mapper.readValue(message, KafkaMessage.class);
 
             if (!this.hasValidFields(messageObject)) {
-                throw new IllegalArgumentException("Kafka message format is not valid.");
+                throw new IllegalArgumentException(INVALID_MESSAGE_FORMAT_ERROR_TEXT);
             }
 
             onConsumeMessage(messageObject);

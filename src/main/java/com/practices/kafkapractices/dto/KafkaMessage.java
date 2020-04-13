@@ -1,5 +1,6 @@
 package com.practices.kafkapractices.dto;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.practices.kafkapractices.dto.TestDTO;
 import lombok.Getter;
@@ -12,12 +13,10 @@ import lombok.ToString;
 @ToString
 public class KafkaMessage {
     public String event_type;
-    public Object event_message;
+    public String event_message;
 
-    public TestDIO getDtoMessage() {
+    public TestDTO getDtoMessage() throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
-        messageObject.event_message = mapper.convertValue(messageObject.event_message, TestDTO.class);
-
-        return this.event_message;
+        return mapper.readValue(this.event_message, TestDTO.class);
     }
 }

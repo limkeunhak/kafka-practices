@@ -18,7 +18,7 @@ import java.util.Map;
 
 @EnableKafka
 @Configuration
-public class KafkaConsumerConfig {
+public class BaseKafkaConsumerConfig {
 
     @Value(value = "${kafka.bootstrapAddress}")
     private String bootstrapAddress;
@@ -48,25 +48,4 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> signupKafkaListenerContainerFactory() {
-        return kafkaListenerContainerFactory(groupIdMessage);
-    }
-
-    public ConsumerFactory<String, User> consumerFactoryUser() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupIdUser);
-
-        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), new JsonDeserializer<>(User.class));
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, User> userKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, User> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactoryUser());
-
-        return factory;
-    }
 }
