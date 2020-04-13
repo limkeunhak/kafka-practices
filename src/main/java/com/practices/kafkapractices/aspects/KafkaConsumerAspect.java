@@ -1,13 +1,12 @@
 package com.practices.kafkapractices.aspects;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.practices.kafkapractices.dto.KafkaMessage;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,35 +18,13 @@ import java.io.IOException;
  * @version 1.0
  * @since   2020-04-10
  */
-
 @Aspect
 @Component
 public class KafkaConsumerAspect {
+    private Logger logger = LoggerFactory.getLogger(KafkaConsumerAspect.class);
 
-    // TODO: Custom Logger로 변경 후 Autowired 처리
-    private Logger logger = LogManager.getLogger();
-
-    /**
-     * KafkaListener를 통해 전달받은 메시지의 유효성을 검사합니다.
-     * 올바른 형식이 아니라면 IllegalArgumentException
-     *
-     * @param joinPoint joint point.
-     * @return Nothing.
-     * @exception IllegalArgumentException On input validation error.
-     * @see IllegalArgumentException
-     */
-    @Before("@annotation(ValidateInputMessage)")
-    public void PreConsumeAdvice(JoinPoint joinPoint) throws IllegalArgumentException {
-        String message = joinPoint.getArgs()[0].toString();
-
-        if (!this.isJSONValid(message)) {
-            logger.error("Kafka message is not valid json string.");
-            throw new IllegalArgumentException("Kafka message is not valid json string.");
-        } else if (!this.hasValidFields(message)) {
-            logger.error("Kafka message format is not valid.");
-            throw new IllegalArgumentException("Kafka message format is not valid.");
-        }
-    }
+    private static String ILLEGAL_NUMBER_OF_ARGUMENT_EXCEPTION_TEXT = "the comsume method must have 2 arguments.";
+    private static String ILLEGAL_MESSAGE_FORMAT_EXCEPTION_TEXT = "the kafka message value is not valid json string.";
 
     /**
      * KafkaListener를 통해 전달받은 메시지의 처리 후 메시지 오프셋을 커밋합니다.
@@ -57,10 +34,43 @@ public class KafkaConsumerAspect {
      * @exception IOException On input error.
      * @see IOException
      */
-    @After("@annotation(AutoCommitOffset)")
+    @After("@annotation(CommitOffsetEveryMessage)")
     public void PostConsumeAdvice(JoinPoint joinPoint) {
-        System.out.println("PostConsumeAdvice() called");
-        // TODO: Auto Commit
+        try {
+            if (joinPoint.getArgs().length != 2) {
+                throw new IllegalArgumentException(ILLEGAL_NUMBER_OF_ARGUMENT_EXCEPTION_TEXT);
+            }
+
+            Acknowledgment ack = (Acknowledgment) joinPoint.getArgs()[1];
+
+            ack.acknowledge();
+        } catch(ClassCastException ex) {
+            logger.error(ex.getMessage());
+        } catch(IllegalArgumentException ex) {
+            logger.error(ex.getMessage());
+        }
+    }
+
+    /**
+     * KafkaListener를 통해 전달받은 메시지가 유효한 JSON 문자열인지 확인합니다.
+     *
+     * @param joinPoint Unused.
+     * @return Nothing.
+     * @exception IOException On input error.
+     * @see IOException
+     */
+    @After("@annotation(ValidateMessageFormat)")
+    public void PreConsumeAdvice(JoinPoint joinPoint) throws IllegalArgumentException {
+        String message = joinPoint.getArgs()[0].toString();
+
+        if (!this.isJSONValid(message)) {
+            throw new IllegalArgumentException(ILLEGAL_MESSAGE_FORMAT_EXCEPTION_TEXT);
+        }
+    }
+
+    @AfterThrowing( value = "@annotation(HandleMessageException)", throwing = "throwable")
+    public void ExceptionHandleAdvice(JoinPoint joinPoint, Throwable throwable) throws IllegalArgumentException {
+        // WRITE YOUR EXCEPTION HANDLING CODE HERE
     }
 
     /**
@@ -84,41 +94,13 @@ public class KafkaConsumerAspect {
         return result;
     }
 
-    /**
-     * KafkaListener의 메시지 처리 중 발생한 예외를 핸들링합니다.
-     *
-     * @param ex Throwable.
-     * @return Nothing.
-     * @exception IOException On input error.
-     * @see IOException
-     */
-    @AfterThrowing(value="@annotation(HandleConsumerError)", throwing="ex")
-    public void afterThrowingAdvice(Throwable ex) {
-        logger.error(ex.getMessage());
-        // TODO: 메시지 처리 중 발생한 예외에 따라 핸들링 로직 추가
-    }
 
-    public boolean isJSONValid(String jsonInString) {
+    private boolean isJSONValid(String jsonInString) {
         try {
             final ObjectMapper mapper = new ObjectMapper();
             mapper.readTree(jsonInString);
             return true;
         } catch (IOException e) {
-            return false;
-        }
-    }
-
-    public boolean hasValidFields(String jsonInString) {
-        Gson gson = new Gson();
-
-        try {
-            KafkaMessage message = gson.fromJson(jsonInString, KafkaMessage.class);
-
-            if(message.event_message == "" || message.event_type == "") {
-                return false;
-            }
-            return true;
-        } catch (Exception ex) {
             return false;
         }
     }
