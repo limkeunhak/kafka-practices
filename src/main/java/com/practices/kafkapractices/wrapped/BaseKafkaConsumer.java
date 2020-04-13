@@ -42,6 +42,8 @@ public interface BaseKafkaConsumer {
             }
 
             onConsumeMessage(messageObject);
+
+            ack.acknowledge();
         } catch (Exception ex) {
             logger.error(ex.getMessage());
             onError(ex, record);
