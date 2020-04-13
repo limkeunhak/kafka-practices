@@ -25,7 +25,7 @@ public interface BaseKafkaConsumer {
     // TODO: Custom Logger로 변경 후 Autowired 처리 혹은 Logging 제거 (밖에서 로깅하도록)
     Logger logger = LogManager.getLogger();
 
-    @KafkaListener(topics = "test", groupId = "test-consumer-string")
+    @KafkaListener(topics = "${memberservice.kafka.topic.name}", groupId = "${memberservice.kafka.consumer.group-id}")
     private void consume(ConsumerRecord record) {
         String message = record.value().toString();
 
@@ -36,9 +36,6 @@ public interface BaseKafkaConsumer {
 
             ObjectMapper mapper = new ObjectMapper();
             KafkaMessage messageObject = mapper.readValue(message, KafkaMessage.class);
-
-            // TODO: Generic 으로 처리 못하나???
-            messageObject.event_message = mapper.convertValue(messageObject.event_message, TestDTO.class);
 
             if (!this.hasValidFields(messageObject)) {
                 throw new IllegalArgumentException("Kafka message format is not valid.");
